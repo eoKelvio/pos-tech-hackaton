@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none">
+  <!-- Background -->
+  <rect width="32" height="32" rx="8" fill="#7c3aed"/>
+  <!-- Book body -->
+  <rect x="7" y="7" width="12" height="17" rx="2" fill="white" opacity="0.9"/>
+  <rect x="7" y="7" width="2" height="17" rx="1" fill="#a78bfa"/>
+  <!-- Book lines -->
+  <rect x="11" y="11" width="6" height="1.5" rx="0.75" fill="#c4b5fd"/>
+  <rect x="11" y="14" width="5" height="1.5" rx="0.75" fill="#c4b5fd"/>
+  <rect x="11" y="17" width="4" height="1.5" rx="0.75" fill="#c4b5fd"/>
+  <!-- Lightning bolt -->
+  <path d="M20 8 L16 16 L19 16 L15 24 L23 14 L20 14 Z" fill="#fbbf24" stroke="#f59e0b" stroke-width="0.5"/>
+</svg>
