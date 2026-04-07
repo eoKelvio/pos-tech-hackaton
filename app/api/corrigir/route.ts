@@ -1,28 +1,29 @@
 import { NextRequest, NextResponse } from "next/server";
 import { generateText } from "@/app/lib/ai-generate";
 import { getApiKeyForProvider } from "@/app/lib/env-keys";
+import { sanitize } from "@/app/lib/sanitize";
+import { handleApiError } from "@/app/lib/api-error";
 
 export async function POST(req: NextRequest) {
   try {
-    const {
-      tipoAvaliacao,
-      materia,
-      serie,
-      nomeAluno,
-      enunciado,
-      resposta,
-      criteriosPersonalizados,
-      imageBase64,
-      imageMimeType,
-      aiConfig,
-    } = await req.json();
+    const body = await req.json();
+
+    const tipoAvaliacao          = sanitize(body.tipoAvaliacao,          "short");
+    const materia                = sanitize(body.materia,                "short");
+    const serie                  = sanitize(body.serie,                  "short");
+    const nomeAluno              = sanitize(body.nomeAluno,              "short");
+    const enunciado              = sanitize(body.enunciado,              "long");
+    const resposta               = sanitize(body.resposta,               "content");
+    const criteriosPersonalizados = sanitize(body.criteriosPersonalizados, "long");
+    const imageBase64            = typeof body.imageBase64 === "string" ? body.imageBase64 : undefined;
+    const imageMimeType          = sanitize(body.imageMimeType,          "short");
 
     if (!tipoAvaliacao || (!resposta && !imageBase64)) {
       return NextResponse.json({ error: "Preencha a resposta do aluno ou envie um arquivo." }, { status: 400 });
     }
 
-    const provider = aiConfig?.provider ?? "gemini";
-    const model = aiConfig?.model ?? "gemini-1.5-flash";
+    const provider = sanitize(body.aiConfig?.provider, "short") || "gemini";
+    const model    = sanitize(body.aiConfig?.model,    "short") || "gemini-1.5-flash";
     const apiKey = getApiKeyForProvider(provider);
 
     if (!apiKey) {
@@ -97,19 +98,6 @@ Faça a correção agora:`;
 
     return NextResponse.json({ correcao: text });
   } catch (error: unknown) {
-    console.error("Erro ao corrigir:", error);
-    const status =
-      typeof error === "object" && error !== null && "status" in error
-        ? (error as { status: number }).status : 0;
-    if (status === 429) {
-      return NextResponse.json(
-        { error: "Limite de requisições atingido. Aguarde alguns minutos e tente novamente." },
-        { status: 429 }
-      );
-    }
-    return NextResponse.json(
-      { error: "Erro ao realizar a correção. Verifique sua chave de API e tente novamente." },
-      { status: 500 }
-    );
+    return handleApiError(error, "realizar a correção");
   }
 }

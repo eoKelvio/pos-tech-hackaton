@@ -1,17 +1,25 @@
 import { NextRequest, NextResponse } from "next/server";
 import { generateText } from "@/app/lib/ai-generate";
 import { getApiKeyForProvider } from "@/app/lib/env-keys";
+import { sanitize } from "@/app/lib/sanitize";
+import { handleApiError } from "@/app/lib/api-error";
 
 export async function POST(req: NextRequest) {
   try {
-    const { materia, serie, tema, duracao, objetivos, aiConfig } = await req.json();
+    const body = await req.json();
+
+    const materia  = sanitize(body.materia,  "short");
+    const serie    = sanitize(body.serie,    "short");
+    const tema     = sanitize(body.tema,     "medium");
+    const duracao  = sanitize(body.duracao,  "short");
+    const objetivos = sanitize(body.objetivos, "medium");
 
     if (!materia || !serie || !tema || !duracao) {
       return NextResponse.json({ error: "Preencha todos os campos obrigatórios." }, { status: 400 });
     }
 
-    const provider = aiConfig?.provider ?? "gemini";
-    const model = aiConfig?.model ?? "gemini-1.5-flash";
+    const provider = sanitize(body.aiConfig?.provider, "short") || "gemini";
+    const model    = sanitize(body.aiConfig?.model,    "short") || "gemini-1.5-flash";
     const apiKey = getApiKeyForProvider(provider);
 
     if (!apiKey) {
@@ -65,15 +73,6 @@ Escreva em português brasileiro, de forma clara e prática, pensando na realida
     const text = await generateText({ provider, model, apiKey, prompt });
     return NextResponse.json({ plano: text });
   } catch (error: unknown) {
-    console.error("Erro ao gerar plano:", error);
-
-    const status = typeof error === "object" && error !== null && "status" in error
-      ? (error as { status: number }).status : 0;
-
-    if (status === 429) {
-      return NextResponse.json({ error: "Limite de requisições atingido. Aguarde alguns minutos e tente novamente." }, { status: 429 });
-    }
-
-    return NextResponse.json({ error: "Erro ao gerar o plano de aula. Verifique sua chave de API e tente novamente." }, { status: 500 });
+    return handleApiError(error, "gerar o plano de aula");
   }
 }
