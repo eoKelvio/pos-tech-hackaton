@@ -1,4 +1,4 @@
-export type TipoRegistro = "plano" | "tarefa" | "questionario";
+export type TipoRegistro = "plano" | "tarefa" | "questionario" | "correcao";
 
 export interface Registro {
   id: number;
@@ -20,6 +20,10 @@ export interface Registro {
   // vínculo
   planoVinculadoId?: number;
   planoVinculadoTema?: string;
+  // correcao
+  tipoAvaliacao?: string;
+  nomeAluno?: string;
+  notaFinal?: string;
 }
 
 export function getHistorico(): Registro[] {
@@ -59,10 +63,12 @@ export const TIPO_LABELS: Record<TipoRegistro, string> = {
   plano: "Plano de Aula",
   tarefa: "Tarefa",
   questionario: "Questionário",
+  correcao: "Correção",
 };
 
 export const TIPO_COLORS: Record<TipoRegistro, string> = {
   plano: "bg-primary/10 text-primary",
   tarefa: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
   questionario: "bg-violet-500/10 text-violet-600 dark:text-violet-400",
+  correcao: "bg-orange-500/10 text-orange-600 dark:text-orange-400",
 };

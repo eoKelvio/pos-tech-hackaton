@@ -14,6 +14,7 @@ import {
   FilePlus,
   ClipboardCheck,
   FileQuestion,
+  CheckCircle,
   History,
   Sun,
   Moon,
@@ -33,6 +34,7 @@ const navItems = [
       { href: "/criar", label: "Gerar Plano de Aula", icon: FilePlus },
       { href: "/tarefas", label: "Gerar Tarefas", icon: ClipboardCheck },
       { href: "/questionarios", label: "Gerar Questionários", icon: FileQuestion },
+      { href: "/corrigir", label: "Corrigir Avaliação", icon: CheckCircle },
     ],
   },
   {

@@ -2,30 +2,40 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import OpenAI from "openai";
 import Anthropic from "@anthropic-ai/sdk";
 
+interface GenerateOptions {
+  provider: string;
+  model: string;
+  apiKey: string;
+  prompt: string;
+  imageBase64?: string;
+  imageMimeType?: string;
+}
+
 export async function generateText({
   provider,
   model,
   apiKey,
   prompt,
-}: {
-  provider: string;
-  model: string;
-  apiKey: string;
-  prompt: string;
-}): Promise<string> {
+  imageBase64,
+  imageMimeType = "image/jpeg",
+}: GenerateOptions): Promise<string> {
   switch (provider) {
     case "gemini": {
       const genAI = new GoogleGenerativeAI(apiKey);
       const m = genAI.getGenerativeModel({ model });
+      if (imageBase64) {
+        const result = await m.generateContent([
+          { inlineData: { data: imageBase64, mimeType: imageMimeType as "image/jpeg" | "image/png" | "image/webp" } },
+          prompt,
+        ]);
+        return result.response.text();
+      }
       const result = await m.generateContent(prompt);
       return result.response.text();
     }
 
     case "groq": {
-      const client = new OpenAI({
-        apiKey,
-        baseURL: "https://api.groq.com/openai/v1",
-      });
+      const client = new OpenAI({ apiKey, baseURL: "https://api.groq.com/openai/v1" });
       const completion = await client.chat.completions.create({
         model,
         messages: [{ role: "user", content: prompt }],
@@ -34,10 +44,20 @@ export async function generateText({
     }
 
     case "github": {
-      const client = new OpenAI({
-        apiKey,
-        baseURL: "https://models.inference.ai.azure.com",
-      });
+      const client = new OpenAI({ apiKey, baseURL: "https://models.inference.ai.azure.com" });
+      if (imageBase64) {
+        const completion = await client.chat.completions.create({
+          model,
+          messages: [{
+            role: "user",
+            content: [
+              { type: "image_url", image_url: { url: `data:${imageMimeType};base64,${imageBase64}` } },
+              { type: "text", text: prompt },
+            ],
+          }],
+        });
+        return completion.choices[0].message.content ?? "";
+      }
       const completion = await client.chat.completions.create({
         model,
         messages: [{ role: "user", content: prompt }],
@@ -47,6 +67,19 @@ export async function generateText({
 
     case "openai": {
       const client = new OpenAI({ apiKey });
+      if (imageBase64) {
+        const completion = await client.chat.completions.create({
+          model,
+          messages: [{
+            role: "user",
+            content: [
+              { type: "image_url", image_url: { url: `data:${imageMimeType};base64,${imageBase64}` } },
+              { type: "text", text: prompt },
+            ],
+          }],
+        });
+        return completion.choices[0].message.content ?? "";
+      }
       const completion = await client.chat.completions.create({
         model,
         messages: [{ role: "user", content: prompt }],
@@ -56,6 +89,24 @@ export async function generateText({
 
     case "anthropic": {
       const client = new Anthropic({ apiKey });
+      if (imageBase64) {
+        const message = await client.messages.create({
+          model,
+          max_tokens: 4096,
+          messages: [{
+            role: "user",
+            content: [
+              {
+                type: "image",
+                source: { type: "base64", media_type: imageMimeType as "image/jpeg" | "image/png" | "image/webp", data: imageBase64 },
+              },
+              { type: "text", text: prompt },
+            ],
+          }],
+        });
+        const block = message.content.find((b) => b.type === "text");
+        return block && block.type === "text" ? block.text : "";
+      }
       const message = await client.messages.create({
         model,
         max_tokens: 4096,

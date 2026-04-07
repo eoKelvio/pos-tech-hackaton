@@ -6,7 +6,7 @@ import AppShell from "../components/AppShell";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { FileText, ChevronRight, Plus, Trash2, Clock, ClipboardCheck, FileQuestion } from "lucide-react";
+import { FileText, ChevronRight, Plus, Trash2, Clock, ClipboardCheck, FileQuestion, CheckCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { buttonVariants } from "@/components/ui/button";
 import Link from "next/link";
@@ -17,18 +17,21 @@ const FILTROS: { key: TipoRegistro | "todos"; label: string }[] = [
   { key: "plano", label: "Planos de Aula" },
   { key: "tarefa", label: "Tarefas" },
   { key: "questionario", label: "Questionários" },
+  { key: "correcao", label: "Correções" },
 ];
 
 const TIPO_ICON = {
   plano: FileText,
   tarefa: ClipboardCheck,
   questionario: FileQuestion,
+  correcao: CheckCircle,
 };
 
 const TIPO_COLOR = {
   plano: "text-primary bg-primary/10",
   tarefa: "text-emerald-600 dark:text-emerald-400 bg-emerald-500/10",
   questionario: "text-violet-600 dark:text-violet-400 bg-violet-500/10",
+  correcao: "text-orange-600 dark:text-orange-400 bg-orange-500/10",
 };
 
 export default function Historico() {
@@ -77,7 +80,7 @@ export default function Historico() {
               </Button>
             )}
             <Link
-              href={filtro === "tarefa" ? "/tarefas" : filtro === "questionario" ? "/questionarios" : "/criar"}
+              href={filtro === "tarefa" ? "/tarefas" : filtro === "questionario" ? "/questionarios" : filtro === "correcao" ? "/corrigir" : "/criar"}
               className={cn(buttonVariants({ size: "sm" }), "gap-1.5")}
             >
               <Plus className="h-3.5 w-3.5" /> Novo
@@ -119,7 +122,7 @@ export default function Historico() {
               {filtro === "todos" ? "Seu histórico aparecerá aqui" : `Nenhum ${TIPO_LABELS[filtro as TipoRegistro]?.toLowerCase()} gerado ainda`}
             </p>
             <Link
-              href={filtro === "tarefa" ? "/tarefas" : filtro === "questionario" ? "/questionarios" : "/criar"}
+              href={filtro === "tarefa" ? "/tarefas" : filtro === "questionario" ? "/questionarios" : filtro === "correcao" ? "/corrigir" : "/criar"}
               className={cn(buttonVariants({ size: "sm" }), "mt-5")}
             >
               Criar agora

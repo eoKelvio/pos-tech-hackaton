@@ -23,6 +23,7 @@ const NOVO_HREF: Record<string, string> = {
   plano: "/criar",
   tarefa: "/tarefas",
   questionario: "/questionarios",
+  correcao: "/corrigir",
 };
 
 export default function Resultado() {
