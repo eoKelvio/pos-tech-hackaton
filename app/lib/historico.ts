@@ -43,6 +43,9 @@ export function deleteFromHistorico(id: number) {
   localStorage.setItem("historico", JSON.stringify(historico));
 }
 
+const MAX_ITEMS = 100;
+const MAX_BYTES = 4 * 1024 * 1024; // 4MB — conservador para evitar quota errors
+
 export function saveToHistorico(registro: Omit<Registro, "id" | "data">): Registro {
   const historico = getHistorico();
   const novo: Registro = {
@@ -51,7 +54,26 @@ export function saveToHistorico(registro: Omit<Registro, "id" | "data">): Regist
     ...registro,
   };
   historico.unshift(novo);
-  localStorage.setItem("historico", JSON.stringify(historico.slice(0, 30)));
+
+  // Limita por quantidade
+  let lista = historico.slice(0, MAX_ITEMS);
+
+  // Limita por tamanho — remove os mais antigos até caber
+  while (lista.length > 1) {
+    const serialized = JSON.stringify(lista);
+    if (new TextEncoder().encode(serialized).length <= MAX_BYTES) break;
+    lista = lista.slice(0, lista.length - 1);
+  }
+
+  try {
+    localStorage.setItem("historico", JSON.stringify(lista));
+  } catch {
+    // QuotaExceededError — tenta salvar sem o item mais antigo
+    try {
+      localStorage.setItem("historico", JSON.stringify(lista.slice(0, Math.max(1, lista.length - 5))));
+    } catch { /* falha silenciosa */ }
+  }
+
   return novo;
 }
 

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { renderMarkdown } from "../lib/markdown";
 import AppShell from "../components/AppShell";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -9,15 +10,6 @@ import { Separator } from "@/components/ui/separator";
 import { Printer, Plus, Clock, BookOpen } from "lucide-react";
 import { getHistorico, TIPO_LABELS, type Registro } from "../lib/historico";
 
-function renderMarkdown(text: string) {
-  return text
-    .replace(/^## (.+)$/gm, '<h2 class="text-lg font-semibold text-foreground mt-7 mb-2 first:mt-0">$1</h2>')
-    .replace(/^### (.+)$/gm, '<h3 class="text-base font-medium text-foreground mt-4 mb-1">$1</h3>')
-    .replace(/\*\*(.+?)\*\*/g, '<strong class="font-semibold text-foreground">$1</strong>')
-    .replace(/^- (.+)$/gm, '<li class="ml-5 list-disc text-muted-foreground mb-1 text-sm">$1</li>')
-    .replace(/\n\n/g, '</p><p class="text-sm text-muted-foreground mb-2 leading-relaxed">')
-    .replace(/^(?!<[hli])(.+)$/gm, '<p class="text-sm text-muted-foreground mb-2 leading-relaxed">$1</p>');
-}
 
 const NOVO_HREF: Record<string, string> = {
   plano: "/criar",

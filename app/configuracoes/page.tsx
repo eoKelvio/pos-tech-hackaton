@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { Check, Eye, EyeOff, Save, Trash2, Lock } from "lucide-react";
+import { Check, Eye, EyeOff, Save, Trash2, Lock, AlertCircle, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PROVIDERS } from "../lib/providers";
 
@@ -20,6 +20,7 @@ export default function Configuracoes() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [isRevealedKey, setIsRevealedKey] = useState(false);
+  const [testError, setTestError] = useState("");
 
   async function loadConfigs() {
     const res = await fetch("/api/config");
@@ -44,6 +45,7 @@ export default function Configuracoes() {
     setShowKey(false);
     setSaved(false);
     setIsRevealedKey(false);
+    setTestError("");
   }
 
   async function toggleReveal() {
@@ -62,7 +64,20 @@ export default function Configuracoes() {
   async function handleSave() {
     if (!inputValue.trim()) return;
     setSaving(true);
+    setTestError("");
     try {
+      // Valida a chave antes de salvar
+      const testRes = await fetch("/api/config/test", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ provider: selectedProvider, apiKey: inputValue.trim() }),
+      });
+      if (!testRes.ok) {
+        const data = await testRes.json();
+        setTestError(data.error ?? "Chave inválida. Verifique e tente novamente.");
+        return;
+      }
+
       await fetch("/api/config", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -74,6 +89,8 @@ export default function Configuracoes() {
       setIsRevealedKey(false);
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
+    } catch {
+      setTestError("Erro de conexão. Verifique sua internet e tente novamente.");
     } finally {
       setSaving(false);
     }
@@ -201,12 +218,21 @@ export default function Configuracoes() {
               </div>
             </div>
 
+            {testError && (
+              <div className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+                <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
+                {testError}
+              </div>
+            )}
+
             <Button
               onClick={handleSave}
               disabled={!inputValue.trim() || saving || isRevealedKey}
               className="w-full gap-2 h-11 font-semibold"
             >
-              {saved
+              {saving
+                ? <><Loader2 className="h-4 w-4 animate-spin" /> Validando chave...</>
+                : saved
                 ? <><Check className="h-4 w-4" /> Salvo!</>
                 : <><Save className="h-4 w-4" /> Salvar {currentProvider.name}</>
               }

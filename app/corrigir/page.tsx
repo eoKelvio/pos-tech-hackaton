@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { renderMarkdown } from "../lib/markdown";
 import AppShell from "../components/AppShell";
 import ModelSelector from "../components/ModelSelector";
 import ConteudoSelector from "../components/ConteudoSelector";
@@ -30,17 +31,6 @@ const TIPOS = [
 
 const VISION_PROVIDERS = ["gemini", "anthropic", "openai", "github"];
 
-function renderMarkdown(text: string) {
-  return text
-    .replace(/^## (.+)$/gm, '<h2 class="text-base font-semibold text-foreground mt-6 mb-2 first:mt-0">$1</h2>')
-    .replace(/^### (.+)$/gm, '<h3 class="text-sm font-semibold text-foreground mt-4 mb-2">$1</h3>')
-    .replace(/\*\*(.+?)\*\*/g, '<strong class="font-semibold text-foreground">$1</strong>')
-    .replace(/^(\d+\.) (.+)$/gm, '<div class="flex gap-2 mb-2"><span class="font-semibold text-primary shrink-0 text-sm">$1</span><span class="text-sm text-foreground">$2</span></div>')
-    .replace(/^- (.+)$/gm, '<li class="ml-5 list-disc text-muted-foreground mb-1 text-sm">$1</li>')
-    .replace(/\n\n/g, '</p><p class="text-sm text-muted-foreground mb-2 leading-relaxed">')
-    .replace(/^(?!<[hdli])(.+)$/gm, '<p class="text-sm text-muted-foreground mb-2 leading-relaxed">$1</p>');
-}
-
 interface FileState {
   name: string;
   type: "text" | "image";
@@ -56,6 +46,7 @@ export default function Corrigir() {
     materia: "",
     serie: "",
     nomeAluno: "",
+    enunciadoManual: "",
     resposta: "",
     criteriosPersonalizados: "",
   });
@@ -74,8 +65,24 @@ export default function Corrigir() {
     setForm({ ...form, [e.target.name]: e.target.value });
   }
 
+  const TIPO_MAP: Record<string, string> = {
+    questionario: "questionario",
+    tarefa: "tarefa",
+    plano: "outro",
+  };
+
   function handleGabaritoSelect(registro: Registro | null) {
     setGabarito(registro);
+    if (registro) {
+      setForm((f) => ({
+        ...f,
+        materia: registro.materia && registro.materia !== "Não informada" ? registro.materia : f.materia,
+        serie: registro.serie && registro.serie !== "Não informada" ? registro.serie : f.serie,
+        tipoAvaliacao: TIPO_MAP[registro.tipo] ?? f.tipoAvaliacao,
+      }));
+    } else {
+      setForm((f) => ({ ...f, materia: "", serie: "", tipoAvaliacao: "questionario" }));
+    }
   }
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -146,7 +153,7 @@ export default function Corrigir() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...form,
-          enunciado: gabarito?.conteudo ?? "",
+          enunciado: gabarito?.conteudo ?? form.enunciadoManual,
           imageBase64: arquivo?.type === "image" ? arquivo.base64 : undefined,
           imageMimeType: arquivo?.type === "image" ? arquivo.mimeType : undefined,
           aiConfig,
@@ -173,8 +180,12 @@ export default function Corrigir() {
         planoVinculadoId: gabarito?.id,
         planoVinculadoTema: gabarito?.tema,
       });
-    } catch {
-      setErro("Erro de conexão. Verifique sua internet e tente novamente.");
+    } catch (err) {
+      if (err instanceof TypeError) {
+        setErro("Sem conexão. Verifique sua internet e tente novamente.");
+      } else {
+        setErro("Ocorreu um erro inesperado. Tente novamente.");
+      }
     } finally {
       setLoading(false);
     }
@@ -204,6 +215,17 @@ export default function Corrigir() {
               <form onSubmit={handleSubmit} className="space-y-8">
 
                 <ModelSelector value={aiConfig} onChange={setAiConfig} />
+
+                <Separator />
+
+                {/* Gabarito vinculado — primeiro para pré-preencher o formulário */}
+                <div className="space-y-4">
+                  <div>
+                    <p className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Gabarito / Enunciado</p>
+                    <p className="text-sm text-muted-foreground mt-1">Vincule uma atividade gerada — matéria, série e tipo serão preenchidos automaticamente.</p>
+                  </div>
+                  <ConteudoSelector selected={gabarito} onSelect={handleGabaritoSelect} />
+                </div>
 
                 <Separator />
 
@@ -249,22 +271,25 @@ export default function Corrigir() {
 
                 <Separator />
 
-                {/* Gabarito vinculado */}
+                {/* Enunciado + Resposta */}
                 <div className="space-y-4">
-                  <p className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Gabarito / Enunciado</p>
-                  <ConteudoSelector selected={gabarito} onSelect={handleGabaritoSelect} />
-                </div>
+                  {!gabarito && (
+                    <div className="space-y-2">
+                      <p className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Enunciado</p>
+                      <Textarea
+                        name="enunciadoManual"
+                        value={form.enunciadoManual}
+                        onChange={handleChange}
+                        rows={3}
+                        placeholder="Cole as perguntas ou a proposta da atividade (opcional, mas ajuda a IA a corrigir com mais precisão)..."
+                        className="resize-none text-sm leading-relaxed"
+                      />
+                    </div>
+                  )}
 
-                <Separator />
-
-                {/* Resposta do Aluno */}
-                <div className="space-y-4">
-                  <div>
+                  <div className="space-y-2">
                     <p className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
                       Resposta do Aluno <span className="text-destructive">*</span>
-                    </p>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      Cole o texto, suba um arquivo de texto (.txt) ou uma foto da resposta (.jpg, .png).
                     </p>
                   </div>
 
@@ -348,6 +373,12 @@ export default function Corrigir() {
 
                 {erro && (
                   <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">{erro}</div>
+                )}
+
+                {loading && (
+                  <p className="text-xs text-muted-foreground text-center -mb-4">
+                    Isso pode levar até 30 segundos dependendo do modelo...
+                  </p>
                 )}
 
                 <Button type="submit" disabled={loading} className="w-full gap-2 h-12 text-base font-semibold" size="lg">
