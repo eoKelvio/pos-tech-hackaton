@@ -42,6 +42,7 @@ A plataforma usa **Inteligência Artificial** para automatizar a criação de:
 - Planos de aula estruturados e completos
 - Tarefas e atividades personalizadas por dificuldade
 - Questionários e avaliações com gabarito automático
+- **Correção automática** de avaliações com feedback detalhado por critério
 
 Tudo isso em segundos, com linguagem adaptada à série e contexto do professor — para que ele possa **focar no que importa: ensinar**.
 
@@ -56,10 +57,15 @@ Tudo isso em segundos, com linguagem adaptada à série e contexto do professor 
 | **Plano de Aula** | Gera um plano completo com objetivos, metodologia, recursos e avaliação |
 | **Tarefas** | Cria atividades para casa com tipo (exercício, redação, pesquisa…) e nível de dificuldade |
 | **Questionários** | Produz avaliações com múltipla escolha, V/F, dissertativa ou mista — com gabarito |
+| **Corrigir Avaliação** | Corrige respostas de alunos com nota, feedback por critério e orientações de melhoria |
+
+### 📷 Correção por Imagem (Multimodal)
+
+Na tela de correção, o professor pode **enviar uma foto ou PDF** da folha de resposta do aluno. A IA analisa a imagem e realiza a correção sem precisar digitar o texto manualmente.
 
 ### 🔗 Vinculação de Conteúdo
 
-Tarefas e questionários podem ser **vinculados a um plano de aula existente**, fornecendo contexto para a IA gerar conteúdo mais coerente com o que foi ensinado em aula.
+Tarefas e questionários podem ser **vinculados a um plano de aula existente**, fornecendo contexto para a IA gerar conteúdo mais coerente com o que foi ensinado em aula. Na correção, o gabarito de uma atividade já gerada pode ser vinculado para pré-preencher automaticamente os campos do formulário.
 
 ### 🤖 Multi-Provedor de IA
 
@@ -120,6 +126,8 @@ pos-tech-hackaton/
 ├── app/
 │   ├── api/
 │   │   ├── config/              # Gerenciamento de chaves de API (GET/POST/DELETE)
+│   │   │   └── test/            # Validação de chave de API contra o provedor
+│   │   ├── corrigir/            # Correção de avaliações com IA (suporte a imagem)
 │   │   ├── gerar-plano/         # Geração de plano de aula
 │   │   ├── gerar-tarefas/       # Geração de tarefas
 │   │   └── gerar-questionarios/ # Geração de questionários
@@ -128,12 +136,17 @@ pos-tech-hackaton/
 │   │   ├── Sidebar.tsx          # Navegação lateral com tema toggle
 │   │   ├── ModelSelector.tsx    # Seletor de provedor e modelo de IA
 │   │   ├── PlanoSelector.tsx    # Vinculador de plano de aula existente
+│   │   ├── ConteudoSelector.tsx # Vinculador de conteúdo histórico (gabarito)
 │   │   └── ThemeProvider.tsx    # Provedor de tema escuro/claro
 │   ├── lib/
-│   │   ├── ai-generate.ts       # Função central de geração (multi-provedor)
+│   │   ├── ai-generate.ts       # Função central de geração (multi-provedor, timeout, max_tokens)
 │   │   ├── providers.ts         # Configuração dos provedores e modelos
 │   │   ├── env-keys.ts          # Leitura/escrita de chaves no .env.local
-│   │   └── historico.ts         # Gerenciamento do histórico (localStorage)
+│   │   ├── historico.ts         # Gerenciamento do histórico (localStorage, limite de tamanho)
+│   │   ├── markdown.ts          # Renderizador Markdown seguro contra XSS
+│   │   ├── sanitize.ts          # Sanitização de inputs antes de compor prompts
+│   │   └── api-error.ts         # Tratamento centralizado de erros de API
+│   ├── corrigir/                # Página: Corrigir Avaliação
 │   ├── criar/                   # Página: Gerar Plano de Aula
 │   ├── tarefas/                 # Página: Gerar Tarefas
 │   ├── questionarios/           # Página: Gerar Questionários
@@ -296,6 +309,46 @@ Salva ou remove uma chave de API.
 { "provider": "gemini" }
 ```
 
+### `POST /api/config/test`
+
+Valida uma chave de API realizando uma chamada mínima ao provedor antes de salvar.
+
+```json
+// Body
+{ "provider": "groq", "apiKey": "gsk_..." }
+
+// Response (sucesso)
+{ "ok": true }
+
+// Response (falha)
+{ "error": "Chave de API inválida ou sem permissão." }
+```
+
+### `POST /api/corrigir`
+
+Corrige uma avaliação de aluno. Aceita texto digitado **ou** imagem/PDF (base64).
+
+```json
+// Body
+{
+  "tipoAvaliacao": "questionario",
+  "materia": "Matemática",
+  "serie": "6º ano EF",
+  "nomeAluno": "Opcional",
+  "enunciado": "Opcional — gabarito ou proposta da questão",
+  "resposta": "Resposta digitada pelo professor (ou vazio se imageBase64 for enviado)",
+  "imageBase64": "Opcional — imagem da folha de resposta em base64",
+  "imageMimeType": "image/jpeg",
+  "criteriosPersonalizados": "Opcional — critérios adicionais do professor",
+  "aiConfig": { "provider": "gemini", "model": "gemini-2.5-flash" }
+}
+
+// Response
+{
+  "correcao": "## Resultado da Correção\n### Nota Final\n..."
+}
+```
+
 ---
 
 ## 🖥️ Telas da Aplicação
@@ -306,8 +359,9 @@ Salva ou remove uma chave de API.
 | **Gerar Plano de Aula** | `/criar` | Formulário + resultado lado a lado com copiar e imprimir |
 | **Gerar Tarefas** | `/tarefas` | Formulário com vínculo a plano + resultado ao lado |
 | **Gerar Questionários** | `/questionarios` | Tipo, quantidade e dificuldade personalizáveis + resultado ao lado |
+| **Corrigir Avaliação** | `/corrigir` | Formulário com vínculo a gabarito, upload de imagem e correção detalhada por IA |
 | **Histórico** | `/historico` | Todos os conteúdos gerados com filtros e exclusão individual |
 | **Resultado** | `/resultado` | Visualização detalhada de um conteúdo salvo com exportação PDF |
-| **Configurações** | `/configuracoes` | Gerenciamento seguro das chaves de API por provedor |
+| **Configurações** | `/configuracoes` | Gerenciamento seguro das chaves de API por provedor com validação em tempo real |
 
 ---
