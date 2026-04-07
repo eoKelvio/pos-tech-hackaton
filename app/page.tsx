@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { FileText, BookOpen, Star, Zap, ChevronRight, ClipboardList, ClipboardCheck } from "lucide-react";
+import { FileText, BookOpen, Star, Zap, ChevronRight, ClipboardList, ClipboardCheck, BadgeCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface Registro {
@@ -80,6 +80,9 @@ export default function Dashboard() {
               </Link>
               <Link href="/questionarios" className={cn(buttonVariants({ variant: "outline", size: "default" }), "gap-2")}>
                 <ClipboardList className="h-4 w-4" /> Gerar Questionários
+              </Link>
+              <Link href="/corrigir" className={cn(buttonVariants({ variant: "outline", size: "default" }), "gap-2")}>
+                <BadgeCheck className="h-4 w-4" /> Corrigir Avaliação
               </Link>
             </div>
           </CardContent>
